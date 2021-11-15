@@ -32,18 +32,37 @@ def get_vlan(vlan):
     return command
 
 
-def get_config_status(config):
+def get_config_status():
     # Print running config status.
     command = "show config status"
     return command
 
 
-def backup_config(backup):
-    # I needed to change this. This will not return a command like the others.
-    current_time = datetime.datetime.today().strftime('%Y_%m_%d')
+def backup_config(net_connect):
+    # Backup the startup config.
+    backup = send(net_connect, "show config")
+    current_time = datetime.datetime.today().strftime('%Y_%m_%d_%H_%M')
     with open('hp_switch_backup_' + str(current_time) + '.cfg', 'w') as f:
         for line in backup:
             f.write(line)
+
+
+def save_config(net_connect):
+    # Check if pending changes need to be saved before saving.
+    check = send(net_connect, get_config_status())
+    
+    if "needs to be saved" in check:
+        print("Would you like to save the running config to the startup config?")
+        print("Enter Y to save.")
+        choice = input("Save? ")
+
+        if choice == "Y":
+            command = "write memory"
+            send(net_connect, command)
+        else:
+            sys.exit()
+    else:
+        sys.exit()
 
 
 def main():
@@ -55,7 +74,7 @@ def main():
     parser.add_argument("-c", "--config", action="store_true", help="Show config status.")
     parser.add_argument("-m", "--mac", nargs='?', const='not_specified', 
             type=str, help="Get MAC address table.")
-    parser.add_argument("-s", "--save-config", action="store_true", 
+    parser.add_argument("-s", "--save", action="store_true", 
             help="Write running config to startup config.")
     parser.add_argument("-v", "--vlan", action="store_true", help="Get VLANs.")
     args = parser.parse_args()
@@ -76,11 +95,13 @@ def main():
     if args.vlan:
         command = get_vlan(args.vlan)
     if args.config:
-        command = get_config_status(args.config)
+        command = get_config_status()
     if args.backup:
         command = None
-        backup = send(net_connect, "show config")
-        backup_config(backup)
+        backup_config(net_connect)
+    if args.save:
+        command = None
+        save_config(net_connect)
 
     # Send command.
     if command is not None:
