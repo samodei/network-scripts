@@ -1,6 +1,7 @@
 #!/bin/python3
 
 import argparse
+import getpass
 
 from netmiko import ConnectHandler
 
@@ -23,27 +24,35 @@ def get_vlan(vlan):
     return command
 
 
-def get_config(config):
-    # TODO
-    command = "show config"
-    command2 = "show running-config"
+def get_config_status(config):
+    command = "show config status"
     return command
+
+
+def backup_config():
+    # TODO
+    backup = "show config"
 
 
 def main():
     # Create the parser and arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("host", help="IP Address of the device.")
+    parser.add_argument("-b", "--backup-config", action="store_true", 
+            help="Backup the startup config.")
+    parser.add_argument("-c", "--config", action="store_true", help="Show config status.")
     parser.add_argument("-m", "--mac", nargs='?', const='not_specified', 
-            type=str, help="Gers MAC address table.")
-    parser.add_argument("-v", "--vlan", action="store_true", help="Gets VLANs.")
-    parser.add_argument("-c", "--config", action="store_true", help="Compare configs.")
+            type=str, help="Get MAC address table.")
+    parser.add_argument("-s", "--save-config", action="store_true", 
+            help="Write running config to startup config.")
+    parser.add_argument("-v", "--vlan", action="store_true", help="Get VLANs.")
     args = parser.parse_args()
 
     # Device info.
     hp_procurve = {
             'device_type':  'hp_procurve',
             'host': args.host,
+            'password': getpass.getpass()
             }
 
     # Initiate the SSH connection.
@@ -55,7 +64,7 @@ def main():
     if args.vlan:
         command = get_vlan(args.vlan)
     if args.config:
-        command = get_config(args.config)
+        command = get_config_status(args.config)
 
     # Send command.
     if command:
