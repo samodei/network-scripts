@@ -23,6 +23,7 @@ def get_vtp_mode(net_connect):
 
 def check_vlan_exists(net_connect, vlanid):
     # Check if VLAN already exists.
+    vlanid = str(vlanid)
     vlan = (net_connect.send_command("show vlan id " + vlanid))
 
     if "VLAN id " + vlanid + " not found" in vlan:
@@ -53,9 +54,9 @@ def main():
         print("VTP mode is transparent.\n Proceeding...\n")
 
         if args.vlan:
-            if check_vlan_exists is False:
+            if check_vlan_exists(net_connect, args.vlan) is False:
                 print("Create VLAN... DEBUG")
-            elif check_vlan_exists is True:
+            elif check_vlan_exists(net_connect, args.vlan) is True:
                 print("Already exists do nothing DEBUG")
     elif get_vtp_mode(net_connect) is False:
         print("VTP mode is not transparent.\n Please enable before continuing.")
