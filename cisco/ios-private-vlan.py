@@ -1,5 +1,15 @@
 #!/bin/python3
 
+"""
+Author: Stefano Amodei <stefano.amodei@pm.me>
+Date: 2022-10-04
+Usage: python ios-private-vlan.py hostname -n VLAN -p 1 -c 2 -i 3
+Description: Script to automate the process of creating private VLANs and their associations.
+
+This isn't as modular as I would've liked. I'd prefer it to be like my other scripts.
+This only needs to do one thing on one platform so I opted for a smaller script.
+"""
+
 import argparse
 import datetime
 import getpass
@@ -7,9 +17,10 @@ import sys
 
 from netmiko import ConnectHandler
 
-# This isn't as modular as I would've liked. I'd prefer it to be like my other scripts.
-# This only needs to do one thing on one platform so I opted for a smaller script.
+# NOTE SVI creation is not included in this script.
+# NOTE Switchport modes for host and promiscuous mode is not included in this script.
 
+# TODO Find a way to provide a wordlist for further automation of a large amount of VLANs.
 
 def get_vtp_mode(net_connect):
     # Check if vtp is transparent.
@@ -31,25 +42,26 @@ def check_vlan_exists(net_connect, vlan_id):
         return True
 
 
-def create_vlan(net_connect, vlan_id, vlan_type):
+def create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type):
     # Create VLAN.
 
-    if vlan_type is primary:
+    # Again this not how I wanted to iterate on the different VLAN types.
+    if vlan_type == "primary":
         config_commands = [
-                'vlan ' + vlan_id,
+                'vlan ' + pvlan,
                 'name ' + vlan_name.upper() + '-P',
                 'private-vlan ' + vlan_type,
-                #'private-vlan association add ' + vlan_id
+                'private-vlan association add ' + cvlan + ' ' + ivlan
                 ]
-    elif vlan_type is community:
+    elif vlan_type == "community":
         config_commands = [
-                'vlan ' + vlan_id,
+                'vlan ' + cvlan,
                 'name ' + vlan_name.upper() + '-C', 
                 'private-vlan ' + vlan_type
                 ]
-    elif vlan_type is isolated:
+    elif vlan_type == "isolated":
         config_commands = [
-                'vlan ' + vlan_id,
+                'vlan ' + ivlan,
                 'name ' + vlan_name.upper() + '-I',
                 'private-vlan ' + vlan_type
                 ]
@@ -89,27 +101,32 @@ def main():
         # A problem I already see is if one fails, the others will still be created.
         # The issue is the script will need to be run again and still require three VLAN IDs.
 
-        # Create Community VLAN
+        # Set args to string.
+        pvlan = str(args.primary)
         cvlan = str(args.community)
+        ivlan = str(args.isolated)
+
+        # Create Community VLAN
         if check_vlan_exists(net_connect, cvlan) is False:
             print("Creating Community VLAN " + cvlan + "...")
-            create_vlan(net_connect, cvlan)
+            vlan_type = "community"
+            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type)
         elif check_vlan_exists(net_connect, cvlan) is True:
             print("VLAN " + cvlan + " already exists.\n Please choose an unused VLAN ID.")
 
         # Create Isolated VLAN
-        ivlan = str(args.isolated)
         if check_vlan_exists(net_connect, ivlan) is False:
             print("Creating Isolated VLAN " + ivlan + "...")
-            create_vlan(net_connect, ivlan)
+            vlan_type = "isolated"
+            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type)
         elif check_vlan_exists(net_connect, ivlan) is True:
             print("VLAN " + ivlan + " already exists.\n Please choose an unused VLAN ID.")
 
         # Create Primary VLAN
-        pvlan = str(args.primary)
         if check_vlan_exists(net_connect, pvlan) is False:
             print("Creating Primary VLAN " + pvlan + "...")
-            create_vlan(net_connect, pvlan)
+            vlan_type = "primary"
+            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type)
         elif check_vlan_exists(net_connect, pvlan) is True:
             print("VLAN " + pvlan + " already exists.\n Please choose an unused VLAN ID.")
 
