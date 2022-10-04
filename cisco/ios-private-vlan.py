@@ -31,6 +31,17 @@ def check_vlan_exists(net_connect, vlanid):
     else:
         return False
 
+def create_vlan(net_connect, vlanid):
+    # Create VLAN.
+    vlanid = str(vlanid)
+
+    config_commands = [
+            'vlan' + vlanid,
+            ]
+
+    net_connect.send_config_set(config_commands)
+
+
 def main():
     # Create the parser and arguments.
     parser = argparse.ArgumentParser()
@@ -56,6 +67,7 @@ def main():
         if args.vlan:
             if check_vlan_exists(net_connect, args.vlan) is False:
                 print("Create VLAN... DEBUG")
+                create_vlan(net_connect, args.vlan)
             elif check_vlan_exists(net_connect, args.vlan) is True:
                 print("Already exists do nothing DEBUG")
     elif get_vtp_mode(net_connect) is False:
