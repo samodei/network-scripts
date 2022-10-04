@@ -21,6 +21,8 @@ from netmiko import ConnectHandler
 # NOTE Switchport modes for host and promiscuous mode is not included in this script.
 
 # TODO Find a way to provide a wordlist for further automation of a large amount of VLANs.
+# TODO Create more verbose output to see a response from the switch.
+
 
 def get_vtp_mode(net_connect):
     # Check if vtp is transparent.
@@ -51,7 +53,7 @@ def create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, vlan_name):
                 'vlan ' + pvlan,
                 'name ' + vlan_name.upper() + '-P',
                 'private-vlan ' + vlan_type,
-                'private-vlan association add ' + cvlan + ' ' + ivlan
+                'private-vlan association add ' + cvlan + '-' + ivlan
                 ]
     elif vlan_type == "community":
         config_commands = [
