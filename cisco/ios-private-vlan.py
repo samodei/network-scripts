@@ -110,7 +110,7 @@ def main():
         if check_vlan_exists(net_connect, cvlan) is False:
             print("Creating Community VLAN " + cvlan + "...")
             vlan_type = "community"
-            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, name)
+            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, args.name)
         elif check_vlan_exists(net_connect, cvlan) is True:
             print("VLAN " + cvlan + " already exists.\n Please choose an unused VLAN ID.")
 
@@ -118,7 +118,7 @@ def main():
         if check_vlan_exists(net_connect, ivlan) is False:
             print("Creating Isolated VLAN " + ivlan + "...")
             vlan_type = "isolated"
-            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, name)
+            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, args.name)
         elif check_vlan_exists(net_connect, ivlan) is True:
             print("VLAN " + ivlan + " already exists.\n Please choose an unused VLAN ID.")
 
@@ -126,7 +126,7 @@ def main():
         if check_vlan_exists(net_connect, pvlan) is False:
             print("Creating Primary VLAN " + pvlan + "...")
             vlan_type = "primary"
-            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, name)
+            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, args.name)
         elif check_vlan_exists(net_connect, pvlan) is True:
             print("VLAN " + pvlan + " already exists.\n Please choose an unused VLAN ID.")
 
