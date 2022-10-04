@@ -21,10 +21,20 @@ def get_vtp_mode(net_connect):
         return False
 
 
+def check_vlan_exists(net_connect, vlanid):
+    # Check if VLAN already exists.
+    vlan = (net_connect.send_command("show vlan id " + vlanid))
+
+    if "VLAN id " + vlanid + " not found" in vlan:
+        return True
+    else:
+        return False
+
 def main():
     # Create the parser and arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("host", help="IP address or hostname of the device.")
+    parser.add_argument("-v", "--vlan", type=int, help="VLAN ID to be created.")
     args = parser.parse_args()
 
     # Device info.
@@ -41,6 +51,12 @@ def main():
     # Check if VTP is transparent.
     if get_vtp_mode(net_connect) is True:
         print("VTP mode is transparent.\n Proceeding...\n")
+
+        if args.vlan:
+            if check_vlan_exists is False:
+                print("Create VLAN... DEBUG")
+            elif check_vlan_exists is True:
+                print("Already exists do nothing DEBUG")
     elif get_vtp_mode(net_connect) is False:
         print("VTP mode is not transparent.\n Please enable before continuing.")
 
