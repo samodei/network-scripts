@@ -16,9 +16,11 @@ import getpass
 import sys
 
 from netmiko import ConnectHandler
+import numpy
 
 # NOTE SVI creation is not included in this script.
 # NOTE Switchport modes for host and promiscuous mode is not included in this script.
+# NOTE I would've liked to make this more flexible, but I'm creating it for my needs right now.
 
 # TODO Find a way to provide a wordlist for further automation of a large amount of VLANs.
 # TODO Create more verbose output to see a response from the switch.
@@ -34,41 +36,42 @@ def get_vtp_mode(net_connect):
         return False
 
 
-def check_vlan_exists(net_connect, vlan_id):
+def check_vlan_exists(net_connect, vlan):
     # Check if VLAN already exists.
-    vlan = (net_connect.send_command("show vlan id " + vlan_id))
+    for row in vlan:
+        vlan_search = (net_connect.send_command("show vlan id " + vlan[row, 0]))
 
-    if "not found" in vlan:
+    if "not found" in vlan_search:
         return False
     else:
         return True
 
 
-def create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, vlan_name):
+def create_vlan(net_connect, vlan, name):
     # Create VLAN.
-
-    # Again this not how I wanted to iterate on the different VLAN types.
-    if vlan_type == "primary":
-        config_commands = [
-                'vlan ' + pvlan,
-                'name ' + vlan_name.upper() + '-P',
-                'private-vlan ' + vlan_type,
-                'private-vlan association add ' + cvlan + '-' + ivlan
-                ]
-    elif vlan_type == "community":
-        config_commands = [
-                'vlan ' + cvlan,
-                'name ' + vlan_name.upper() + '-C', 
-                'private-vlan ' + vlan_type
-                ]
-    elif vlan_type == "isolated":
-        config_commands = [
-                'vlan ' + ivlan,
-                'name ' + vlan_name.upper() + '-I',
-                'private-vlan ' + vlan_type
-                ]
-    else:
-        print("Sup :^)")
+    for row in vlan:
+        if vlan[row, 1] == "community":
+            config_commands = [
+                    'vlan ' + vlan[row, 0],
+                    'name ' + name.upper() + '-C',
+                    'private-vlan community'
+                    ]
+        elif vlan[row, 1] == "isolated":
+            config_commands = [
+                    'vlan ' + vlan[row, 0],
+                    'name ' + name.upper() + '-I',
+                    'private-vlan isolated'
+                    ]
+        elif vlan[row, 1] == "primary":
+            config_commands = [
+                    'vlan ' + vlan[row, 0],
+                    'name ' + name.upper() + '-I',
+                    'private-vlan primary',
+                    'private-vlan association add ' + vlan[0, 0] '-' + vlan[1, 0] 
+                                                                #hardcoding this for now
+                    ]
+        else:
+            print("Sup :^)")
 
     net_connect.send_config_set(config_commands)
 
@@ -95,44 +98,33 @@ def main():
     net_connect = ConnectHandler(**cisco_switch)
 
     # Check if VTP mode is transparent.
-    if get_vtp_mode(net_connect) is True:
+    vtp_transparent = get_vtp_mode(net_connect)
+
+    # Check if VTP mode is transparent.
+    if vtp_transparent is True:
         print("VTP mode is transparent.\n Proceeding...")
 
-        # I want a better way to iterate over the three provided VLANs.
-        # This will work for now, but I'm not a fan.
-        # A problem I already see is if one fails, the others will still be created.
-        # The issue is the script will need to be run again and still require three VLAN IDs.
+        # Import args to matrix.
+        # Each row for each VLAN.
+        # 1st column for VLAN ID.
+        # 2nd column for VLAN type.
+        # 3rd column for VLAN name.
+        # Primary needs to be last because secondary needs to exist before mapping association.
+        # Not concerned with fixing this now.
+        vlan = numpy.array([[str(args.community), "c"],
+                            [str(args.isolated), "i"],
+                            [str(args.primaru), "p"]])
 
-        # Set args to string.
-        pvlan = str(args.primary)
-        cvlan = str(args.community)
-        ivlan = str(args.isolated)
+        # Using a bool instead of calling the function twice because if not it will run twice.
+        vlan_exists = check_vlan_exists(net_connect, vlan)
 
-        # Create Community VLAN
-        if check_vlan_exists(net_connect, cvlan) is False:
-            print("Creating Community VLAN " + cvlan + "...")
-            vlan_type = "community"
-            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, args.name)
-        elif check_vlan_exists(net_connect, cvlan) is True:
-            print("VLAN " + cvlan + " already exists.\n Please choose an unused VLAN ID.")
+        if vlan_exists is False:
+            # Create VLANs.
+            create_vlan(net_connect, vlan, name)
+        elif vlan_exists is True:
+            print("DEBUG NO")
 
-        # Create Isolated VLAN
-        if check_vlan_exists(net_connect, ivlan) is False:
-            print("Creating Isolated VLAN " + ivlan + "...")
-            vlan_type = "isolated"
-            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, args.name)
-        elif check_vlan_exists(net_connect, ivlan) is True:
-            print("VLAN " + ivlan + " already exists.\n Please choose an unused VLAN ID.")
-
-        # Create Primary VLAN
-        if check_vlan_exists(net_connect, pvlan) is False:
-            print("Creating Primary VLAN " + pvlan + "...")
-            vlan_type = "primary"
-            create_vlan(net_connect, pvlan, cvlan, ivlan, vlan_type, args.name)
-        elif check_vlan_exists(net_connect, pvlan) is True:
-            print("VLAN " + pvlan + " already exists.\n Please choose an unused VLAN ID.")
-
-    elif get_vtp_mode(net_connect) is False:
+    elif vtp_transparent is False:
         print("VTP mode is not transparent.\n Please enable before continuing.")
 
     # Disconnect the SSH connection.
