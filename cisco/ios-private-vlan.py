@@ -39,7 +39,7 @@ def get_vtp_mode(net_connect):
 def check_vlan_exists(net_connect, vlan):
     # Check if VLAN already exists.
     for row in vlan:
-        vlan_search = (net_connect.send_command("show vlan id " + vlan[row, 0]))
+        vlan_search = (net_connect.send_command("show vlan id " + row[0]))
 
     if "not found" in vlan_search:
         return False
@@ -50,21 +50,21 @@ def check_vlan_exists(net_connect, vlan):
 def create_vlan(net_connect, vlan, name):
     # Create VLAN.
     for row in vlan:
-        if vlan[row, 1] == "community":
+        if row[1] == "community":
             config_commands = [
-                    'vlan ' + vlan[row, 0],
+                    'vlan ' + row[0],
                     'name ' + name.upper() + '-C',
                     'private-vlan community'
                     ]
-        elif vlan[row, 1] == "isolated":
+        elif row[1] == "isolated":
             config_commands = [
-                    'vlan ' + vlan[row, 0],
+                    'vlan ' + row[0],
                     'name ' + name.upper() + '-I',
                     'private-vlan isolated'
                     ]
-        elif vlan[row, 1] == "primary":
+        elif row[1] == "primary":
             config_commands = [
-                    'vlan ' + vlan[row, 0],
+                    'vlan ' + row[0],
                     'name ' + name.upper() + '-I',
                     'private-vlan primary',
                     'private-vlan association add ' + vlan[0, 0] + '-' + vlan[1, 0]
@@ -112,7 +112,7 @@ def main():
         # Not concerned with fixing this now.
         vlan = numpy.array([[str(args.community), "c"],
                             [str(args.isolated), "i"],
-                            [str(args.primaru), "p"]])
+                            [str(args.primary), "p"]])
 
         # Using a bool instead of calling the function twice because if not it will run twice.
         vlan_exists = check_vlan_exists(net_connect, vlan)
