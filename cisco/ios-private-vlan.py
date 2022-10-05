@@ -2,12 +2,9 @@
 
 """
 Author: Stefano Amodei <stefano.amodei@pm.me>
-Date: 2022-10-04
-Usage: python ios-private-vlan.py hostname -n VLAN -p 1 -c 2 -i 3
+Date: 2022-10-05
+Usage: python ios-private-vlan.py hostname -n VLAN -p 100 -c 101 -i 102
 Description: Script to automate the process of creating private VLANs and their associations.
-
-This isn't as modular as I would've liked. I'd prefer it to be like my other scripts.
-This only needs to do one thing on one platform so I opted for a smaller script.
 """
 
 import argparse
@@ -17,6 +14,7 @@ import sys
 
 from netmiko import ConnectHandler
 import numpy
+
 
 # NOTE SVI creation is not included in this script.
 # NOTE Switchport modes for host and promiscuous mode is not included in this script.
@@ -49,6 +47,7 @@ def check_vlan_exists(net_connect, vlan):
 
 def create_vlan(net_connect, vlan, name):
     # Create VLAN.
+    # I would like to create one config_commands, but not sure how to add the extra line required by primary.
     for row in vlan:
         if row[1] == "community":
             config_commands = [
@@ -67,7 +66,7 @@ def create_vlan(net_connect, vlan, name):
                     'vlan ' + row[0],
                     'name ' + name.upper() + '-P',
                     'private-vlan primary',
-                    'private-vlan association add ' + vlan[0, 0] + '-' + vlan[1, 0]
+                    'private-vlan association add ' + vlan[0, 0] + ',' + vlan[1, 0]
                     ]
         else:
             print("Sup :^)")
@@ -98,29 +97,23 @@ def main():
 
     # Check if VTP mode is transparent.
     vtp_transparent = get_vtp_mode(net_connect)
-
-    # Check if VTP mode is transparent.
     if vtp_transparent is True:
         print("VTP mode is transparent.\n Proceeding...")
 
-        # Import args to matrix.
-        # Each row for each VLAN.
-        # 1st column for VLAN ID.
-        # 2nd column for VLAN type.
-        # Primary needs to be last because secondary needs to exist before mapping association.
+        # Import args into matrix.
+        # Primary needs to be last because secondary needs to exist before association add.
         # Not concerned with fixing this now.
         vlan = numpy.array([[str(args.community), "community"],
                             [str(args.isolated), "isolated"],
                             [str(args.primary), "primary"]])
 
-        # Using a bool instead of calling the function twice because if not it will run twice.
+        # Check if any of the provided VLANs currently exist.
         vlan_exists = check_vlan_exists(net_connect, vlan)
-
         if vlan_exists is False:
             # Create VLANs.
-            create_vlan(net_connect, vlan, name)
+            create_vlan(net_connect, vlan, args.name)
         elif vlan_exists is True:
-            print("DEBUG NO")
+            print("One of the provided VLANs is currently in use. Please choose another.")
 
     elif vtp_transparent is False:
         print("VTP mode is not transparent.\n Please enable before continuing.")
