@@ -65,14 +65,14 @@ def create_vlan(net_connect, vlan, name):
         elif row[1] == "primary":
             config_commands = [
                     'vlan ' + row[0],
-                    'name ' + name.upper() + '-I',
+                    'name ' + name.upper() + '-P',
                     'private-vlan primary',
                     'private-vlan association add ' + vlan[0, 0] + '-' + vlan[1, 0]
                     ]
         else:
             print("Sup :^)")
-
-    net_connect.send_config_set(config_commands)
+            sys.exit()
+        net_connect.send_config_set(config_commands)
 
 
 def main():
@@ -107,12 +107,11 @@ def main():
         # Each row for each VLAN.
         # 1st column for VLAN ID.
         # 2nd column for VLAN type.
-        # 3rd column for VLAN name.
         # Primary needs to be last because secondary needs to exist before mapping association.
         # Not concerned with fixing this now.
-        vlan = numpy.array([[str(args.community), "c"],
-                            [str(args.isolated), "i"],
-                            [str(args.primary), "p"]])
+        vlan = numpy.array([[str(args.community), "community"],
+                            [str(args.isolated), "isolated"],
+                            [str(args.primary), "primary"]])
 
         # Using a bool instead of calling the function twice because if not it will run twice.
         vlan_exists = check_vlan_exists(net_connect, vlan)
