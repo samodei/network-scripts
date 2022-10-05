@@ -67,8 +67,7 @@ def create_vlan(net_connect, vlan, name):
                     'vlan ' + vlan[row, 0],
                     'name ' + name.upper() + '-I',
                     'private-vlan primary',
-                    'private-vlan association add ' + vlan[0, 0] '-' + vlan[1, 0] 
-                                                                #hardcoding this for now
+                    'private-vlan association add ' + vlan[0, 0] + '-' + vlan[1, 0]
                     ]
         else:
             print("Sup :^)")
