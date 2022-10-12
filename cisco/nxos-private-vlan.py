@@ -30,6 +30,8 @@ def get_vtp_mode(net_connect):
 
     if "Transparent" in vtp:
         return True
+    elif "Service not enabled":
+        return True
     else:
         return False
 
@@ -107,20 +109,12 @@ def main():
 
     # Check if private-vlan feature is enabled.
     feature_enabled = get_feature_enabled(net_connect)
-    if feature_enabled is True:
-        print("DEBUG yes")
-    elif feature_enabled is False:
-        print("Feature private-vlan is disabled.\n Please enable before continuing.")
+    
+    # Check if VTP is transparent or disabled.
+    vtp_status = get_vtp_mode(net_connect)
 
-    # Disconnect the SSH connection.
-    net_connect.disconnect()
-
-""" Skipping this for now because VTP is disabled on my core.
     # Check if VTP mode is transparent.
-    #vtp_transparent = get_vtp_mode(net_connect)
-    if vtp_transparent is True:
-        print("VTP mode is transparent.\n Proceeding...")
-
+    if feature_enabled and vtp_status is True:
         # Import args into matrix.
         # Primary needs to be last because secondary needs to exist before association add.
         # Not concerned with fixing this now.
@@ -136,12 +130,14 @@ def main():
         elif vlan_exists is True:
             print("One of the provided VLANs is currently in use. Please choose another.")
 
-    elif vtp_transparent is False:
-        print("VTP mode is not transparent.\n Please enable before continuing.")
+    elif feature_enabled is False:
+        print("Feature private-vlan is disabled.\n Please enable before continuing.")
+    elif vtp_status is False:
+        print("VTP mode does not support private VLANs.\n Please disable VTP or set to transparent.")
 
     # Disconnect the SSH connection.
     net_connect.disconnect()
-"""
+
 
 if __name__ == '__main__':
     main()
