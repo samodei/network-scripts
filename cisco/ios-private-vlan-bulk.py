@@ -84,7 +84,7 @@ def main():
 
     # Device info.
     cisco_switch = {
-            'device_type':  'cisco-ios',
+            'device_type':  'cisco_ios',
             'host': args.host,
             'username': getpass.getuser(),
             'password': getpass.getpass()
