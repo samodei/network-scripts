@@ -3,7 +3,7 @@
 """
 Author: Stefano Amodei <stefano.amodei@pm.me>
 Date: 2022-10-13
-Usage: python nxos-private-vlan.py hostname -n VLAN -p 100 -c 101 -i 102
+Usage: python ios-private-vlan-bulk.py hostname -f FILE
 Description: Script to automate the process of creating private VLANs and their associations.
 """
 
@@ -20,7 +20,6 @@ import numpy
 # NOTE Switchport modes for host and promiscuous mode is not included in this script.
 # NOTE I would've liked to make this more flexible, but I'm creating it for my needs right now.
 
-# TODO Find a way to provide a wordlist for further automation of a large amount of VLANs.
 # TODO Create more verbose output to see a response from the switch.
 
 
@@ -31,16 +30,6 @@ def get_vtp_mode(net_connect):
     if "Transparent" in vtp:
         return True
     elif "Service not enabled":
-        return True
-    else:
-        return False
-
-
-def get_feature_enabled(net_connect):
-    # Check if private-vlan feature is enabled.
-    feature = (net_connect.send_command("show feature | i private-vlan"))
-
-    if "enabled" in feature:
         return True
     else:
         return False
@@ -90,15 +79,12 @@ def main():
     # Create the parser and arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("host", help="IP address or hostname of the Cisco switch")
-    parser.add_argument("-n", "--name", type=str, metavar='', required=True, help="VLAN Name")
-    parser.add_argument("-p", "--primary", type=int, metavar='', required=True, help="Primary VLAN ID")
-    parser.add_argument("-c", "--community", type=int, metavar='', required=True, help="Community VLAN ID")
-    parser.add_argument("-i", "--isolated", type=int, metavar='', required=True, help="Isolated VLAN ID")
+    parser.add_argument("-f", "--file", type=argparse.FileType('r'), required=True)
     args = parser.parse_args()
 
     # Device info.
     cisco_switch = {
-            'device_type':  'cisco_nxos_ssh',
+            'device_type':  'cisco-ios',
             'host': args.host,
             'username': getpass.getuser(),
             'password': getpass.getpass()
@@ -107,31 +93,41 @@ def main():
     # Initiate the SSH connection.
     net_connect = ConnectHandler(**cisco_switch)
 
-    # Check if private-vlan feature is enabled.
-    feature_enabled = get_feature_enabled(net_connect)
-    
     # Check if VTP is transparent or disabled.
     vtp_status = get_vtp_mode(net_connect)
 
-    # Check if VTP mode is transparent.
-    if feature_enabled and vtp_status is True:
-        # Import args into matrix.
-        # Primary needs to be last because secondary needs to exist before association add.
-        # Not concerned with fixing this now.
-        vlan = numpy.array([[str(args.community), "community"],
-                            [str(args.isolated), "isolated"],
-                            [str(args.primary), "primary"]])
+    # Check if feature private-vlan is enabled and VTP mode is transparent or disabled.
+    if vtp_status is True:
+        # If a wordlist is provided.
+        if args.file:
+            file = args.file
+            # Loop on a wordlist for bulk deployment.
+            for line in file:
+                # Strip new line character from line.
+                line = line.strip()
+                # Split line on comma and store in list.
+                line = line.split(',')
 
-        # Check if any of the provided VLANs currently exist.
-        vlan_exists = check_vlan_exists(net_connect, vlan)
-        if vlan_exists is False:
-            # Create VLANs.
-            create_vlan(net_connect, vlan, args.name)
-        elif vlan_exists is True:
-            print("One of the provided VLANs is currently in use. Please choose another.")
+                # Wordlist should be formatted as the following:
+                # VLANNAME,Primary VLAN ID, Isolated VLAN ID, Community VLAN ID.
+                vlan_name = line[0]
+                primary_vid = line[1]
+                isolated_vid = line[2]
+                community_vid = line[3]
+                # I hate repeating code, but I don't have time right now.
+                vlan = numpy.array([[community_vid, "community"],
+                                    [isolated_vid, "isolated"],
+                                    [primary_vid, "primary"]])
 
-    elif feature_enabled is False:
-        print("Feature private-vlan is disabled.\n Please enable before continuing.")
+                # Check if any of the provided VLANs currently exist.
+                vlan_exists = check_vlan_exists(net_connect, vlan)
+                if vlan_exists is False:
+                    # Create VLANs.
+                    create_vlan(net_connect, vlan, vlan_name)
+                elif vlan_exists is True:
+                    print("One of the provided VLANs is currently in use. Please choose another.")
+            else:
+                print("No wordlist provided.")
     elif vtp_status is False:
         print("VTP mode does not support private VLANs.\n Please disable VTP or set to transparent.")
 
