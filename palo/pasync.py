@@ -66,7 +66,8 @@ def set_destination_config(destination, config):
     send_config(destination, command)
 
     # Send downloaded config.
-    send_config(destination, config)
+    for line in config:
+        send_config(destination, config)
 
 
 def main():
@@ -95,7 +96,7 @@ def main():
 
     # Initiate the SSH connection.
     net_connect1 = ConnectHandler(**source_firewall)
-    net_connect2 = ConnectHandler(**source_firewall)
+    net_connect2 = ConnectHandler(**destination_firewall)
 
     # DOWNLOAD CONFIG FROM SOURCE
     source_config = get_source_config(net_connect1)
@@ -107,7 +108,8 @@ def main():
     set_destination_config(net_connect2, source_config)
 
     # Disconnect the SSH connection.
-    net_connect.disconnect()
+    net_connect1.disconnect()
+    net_connect2.disconnect()
 
 
 if __name__ == "__main__":
