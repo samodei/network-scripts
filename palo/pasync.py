@@ -9,12 +9,12 @@ from netmiko import ConnectHandler
 
 def send(net_connect, command):
     # COMMAND FORMATTING
-    output = net_connect.send_command(command), expect_string=r">").
+    output = (net_connect.send_command(command), expect_string=r">"))
     return output
 
 def get_source_config(net_connect):
     # PREFIX
-    command = "show config running xpath devices/entry[@name="localhost.localdomain"]/vsys/entry[@name='vsys1']"
+    command = "show config running xpath devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys1']"
 
     # TODO make this an option
     service = "/service"
@@ -39,27 +39,35 @@ def main():
     # Create the parser and arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("source", help="Source Firewall IP.")
-    #parser.add_argument("destination", help="Destination Firewall IP.")
+    parser.add_argument("destination", help="Destination Firewall IP.")
     parser.add_argument("username", help="Username")
     args = parser.parse_args()
 
     # Device info.
-    firewall = {
+    source_firewall = {
             'device_type':  'paloalto_panos',
-            'source':         args.source,
-            #'destination':  args.destination,
+            'host':         args.source,
             'username':     args.username,
             'password':     getpass.getpass(),
             }
 
+    destination_firewall = {
+            'device_type':  'paloalto_panos',
+            'host':         args.destination,
+            'username':     args.username,
+            'password':     getpass.getpass(),
+            }
+
+
     # Initiate the SSH connection.
-    net_connect = ConnectHandler(**firewall)
+    net_connect = ConnectHandler(**source_firewall)
 
     # DOWNLOAD CONFIG FROM SOURCE
     source_config = get_source_config(net_connect)
 
     # SAVE TO FILE FOR DEBUG
-    backup_config(net_connect, source_config) 
+    backup_config(source_config)
+
     # PUSH CONFIG TO DEST
     #set_destination_config(net_connect)
 
