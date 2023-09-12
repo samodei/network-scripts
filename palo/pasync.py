@@ -16,7 +16,7 @@ def send(net_connect, command):
 
 def get_security_policies(net_connect):
     # Backup the security policies from the running config.
-    backup = send(net_connect, "show running security-policies")
+    policy_config = net_connect.send_command("show running security-policy", expect_string=r">")
     current_time = datetime.datetime.today().strftime("%Y_%m_%d_%H_%M")
     with open("security_policies_backup_" + str(current_time) + ".conf", "w") as f:
         for line in backup:
@@ -32,7 +32,7 @@ def main():
     args = parser.parse_args()
 
     # Device info.
-    fortinet = {
+    firewall = {
             'device_type':  'paloalto_panos',
             'host':         args.host,
             'username':     args.username,
@@ -40,7 +40,7 @@ def main():
             }
 
     # Initiate the SSH connection.
-    net_connect = ConnectHandler(**paloalto_panos)
+    net_connect = ConnectHandler(**firewall)
 
     # Get command based on arguments.
     if args.backup:
