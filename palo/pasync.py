@@ -45,7 +45,7 @@ def main():
     # Get command based on arguments.
     if args.backup:
         command = None
-        backup_config(net_connect)
+        get_security_policies(net_connect)
 
     # Send command.
     if command is not None:
