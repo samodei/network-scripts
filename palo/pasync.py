@@ -16,7 +16,7 @@ def send(net_connect, command):
 
 def get_security_policies(net_connect):
     # Backup the security policies from the running config.
-    policy_config = net_connect.send_command("show running security-policy", expect_string=r">")
+    backup = net_connect.send_command("show running security-policy", expect_string=r">")
     current_time = datetime.datetime.today().strftime("%Y_%m_%d_%H_%M")
     with open("security_policies_backup_" + str(current_time) + ".conf", "w") as f:
         for line in backup:
