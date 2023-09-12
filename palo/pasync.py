@@ -7,29 +7,42 @@ import sys
 
 from netmiko import ConnectHandler
 
-def send(net_connect, command):
-    # COMMAND FORMATTING
-    output = (net_connect.send_command(command), expect_string=r">"))
+def send_operation(net_connect, command):
+    # Operational mode command formatting.
+    output = (net_connect.send_command(command, expect_string=r">"))
+    return output
+
+def send_config(net_connect, command):
+    # Configuration mode command formatting.
+    output = (net_connect.send_command(command, expect_string=r"#"))
     return output
 
 def get_source_config(net_connect):
-    # Set the CLI output mode to set
+    # Set the CLI output mode to set.
     command = "set cli config-output-format set"
-    send(net_connect, command)
+    send_operation(net_connect, command)
 
+    # Enter configure mode.
+    command = "configure"
+    send_config(net_connect, command)
 
-    # XPATH do not need to use.
+    # This was the XPATH syntax I was playing with, but it is much easier to use the set format.
     #command = "show config running xpath devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys1']/"
-    command = "show "
 
     # TODO make this an option
-    service = "service"
-    service_group = "service-group"
-    address = "address"
-    address_group = "address-group"
+    #service = "service"
+    #service_group = "service-group"
+    #address = "address"
+    #address_group = "address-group"
+    #group_mapping = "group-mapping"
+    #tags = "tags"
 
-    command = command + address
-    config = send(net_connect, command)
+    objects = ['service', 'service-group', 'address', 'address-group', 'group-mapping', 'tag', 'profile-group', 'profiles', 'url-filtering', 'hip-objects', 'hip-profiles', 'application-filtering', 'log-settings', 'external-list']
+
+    # Get each object and save to config.
+    for object in objects:
+        command = "show " + object
+        config += send_config(net_connect, command)
 
     return config
     
