@@ -17,14 +17,14 @@ def send_config(net_connect, command):
     output = (net_connect.send_command(command, expect_string=r"#"))
     return output
 
-def get_source_config(net_connect):
+def get_source_config(source):
     # Set the CLI output mode to set.
     command = "set cli config-output-format set"
-    send_operation(net_connect, command)
+    send_operation(source, command)
 
     # Enter configure mode.
     command = "configure"
-    send_config(net_connect, command)
+    send_config(source, command)
 
     # This was the XPATH syntax I was playing with, but it is much easier to use the set format.
     #command = "show config running xpath devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys1']/"
@@ -40,12 +40,17 @@ def get_source_config(net_connect):
     objects = ['service', 'service-group', 'address', 'address-group', 'group-mapping', 'tag', 'profile-group', 'profiles', 'url-filtering', 'hip-objects', 'hip-profiles', 'application-filtering', 'log-settings', 'external-list']
 
     # Get each object and save to config.
+    config = ''
     for object in objects:
         command = "show " + object
-        config += send_config(net_connect, command)
+        config += send_config(source, command)
+
+    # Get security policies and add to the previous config.
+    command = "show rulebase security"
+    config += send_config(source, command)
 
     return config
-    
+
 
 def backup_config(config):
     # Debugging because I don't want to write to a dest without confirm output.
@@ -53,6 +58,16 @@ def backup_config(config):
     with open("security_policies_backup_" + str(current_time) + ".conf", "w") as f:
         for line in config:
             f.write(line)
+
+
+def set_destination_config(destination, config):
+    # Enter configure mode.
+    command = "configure"
+    send_config(destination, command)
+
+    # Send downloaded config.
+    send_config(destination, config)
+
 
 def main():
     # Create the parser and arguments.
@@ -79,16 +94,17 @@ def main():
 
 
     # Initiate the SSH connection.
-    net_connect = ConnectHandler(**source_firewall)
+    net_connect1 = ConnectHandler(**source_firewall)
+    net_connect2 = ConnectHandler(**source_firewall)
 
     # DOWNLOAD CONFIG FROM SOURCE
-    source_config = get_source_config(net_connect)
+    source_config = get_source_config(net_connect1)
 
     # SAVE TO FILE FOR DEBUG
     backup_config(source_config)
 
     # PUSH CONFIG TO DEST
-    #set_destination_config(net_connect)
+    set_destination_config(net_connect2, source_config)
 
     # Disconnect the SSH connection.
     net_connect.disconnect()
