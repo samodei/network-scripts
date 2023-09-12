@@ -66,8 +66,7 @@ def set_destination_config(destination, config):
     send_config(destination, command)
 
     # Send downloaded config.
-    for line in config:
-        send_config(destination, config)
+    send_config(destination, config)
 
 
 def main():
