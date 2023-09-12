@@ -8,33 +8,46 @@ import sys
 from netmiko import ConnectHandler
 
 def send(net_connect, command):
-    output = (net_connect.send_command(command))
-    print(output)
-
-    # Need to return for functions that need output set to a string.
+    # COMMAND FORMATTING
+    output = net_connect.send_command(command), expect_string=r">").
     return output
 
-def get_security_policies(net_connect):
-    # Backup the security policies from the running config.
-    backup = net_connect.send_command("show running security-policy", expect_string=r">")
+def get_source_config(net_connect):
+    # PREFIX
+    command = "show config running xpath devices/entry[@name="localhost.localdomain"]/vsys/entry[@name='vsys1']"
+
+    # TODO make this an option
+    service = "/service"
+    service_group = "/service-group"
+    address = "/address"
+    address_group = "/address-group"
+
+    command = command + service
+    config = send(net_connect, command)
+
+    return config
+    
+
+def backup_config(config):
+    # Debugging because I don't want to write to a dest without confirm output.
     current_time = datetime.datetime.today().strftime("%Y_%m_%d_%H_%M")
     with open("security_policies_backup_" + str(current_time) + ".conf", "w") as f:
-        for line in backup:
+        for line in config:
             f.write(line)
 
 def main():
     # Create the parser and arguments.
     parser = argparse.ArgumentParser()
-    parser.add_argument("host", help="Firewall IP.")
+    parser.add_argument("source", help="Source Firewall IP.")
+    #parser.add_argument("destination", help="Destination Firewall IP.")
     parser.add_argument("username", help="Username")
-    parser.add_argument("-b", "--backup", action="store_true", 
-            help="Backup the startup config.")
     args = parser.parse_args()
 
     # Device info.
     firewall = {
             'device_type':  'paloalto_panos',
-            'host':         args.host,
+            'source':         args.source,
+            #'destination':  args.destination,
             'username':     args.username,
             'password':     getpass.getpass(),
             }
@@ -42,16 +55,13 @@ def main():
     # Initiate the SSH connection.
     net_connect = ConnectHandler(**firewall)
 
-    # Get command based on arguments.
-    if args.backup:
-        command = None
-        get_security_policies(net_connect)
+    # DOWNLOAD CONFIG FROM SOURCE
+    source_config = get_source_config(net_connect)
 
-    # Send command.
-    if command is not None:
-        send(net_connect, command)
-    elif command is None:
-        sys.exit()
+    # SAVE TO FILE FOR DEBUG
+    backup_config(net_connect, source_config) 
+    # PUSH CONFIG TO DEST
+    #set_destination_config(net_connect)
 
     # Disconnect the SSH connection.
     net_connect.disconnect()
